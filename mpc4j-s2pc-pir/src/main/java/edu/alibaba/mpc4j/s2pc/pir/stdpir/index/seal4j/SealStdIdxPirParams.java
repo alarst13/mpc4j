@@ -1,6 +1,8 @@
 package edu.alibaba.mpc4j.s2pc.pir.stdpir.index.seal4j;
 
 import edu.alibaba.mpc4j.common.tool.CommonConstants;
+import edu.alibaba.mpc4j.crypto.fhe.context.EncryptionParameters;
+import edu.alibaba.mpc4j.crypto.fhe.context.SealContext;
 import edu.alibaba.mpc4j.s2pc.pir.stdpir.index.StdIdxPirParams;
 
 /**
@@ -30,11 +32,14 @@ public class SealStdIdxPirParams implements StdIdxPirParams {
     /**
      * SEAL encryption params
      */
-    private final byte[] encryptionParams;
+    private final EncryptionParameters encryptionParams;
     /**
      * expansion ratio
      */
     private final int expansionRatio;
+
+    // Temp
+    static SealContext context;
 
     public SealStdIdxPirParams(int polyModulusDegree, int plainModulusBitLength, int dimension) {
         this.polyModulusDegree = polyModulusDegree;
@@ -44,6 +49,8 @@ public class SealStdIdxPirParams implements StdIdxPirParams {
             polyModulusDegree, (1L << plainModulusBitLength) + 1
         );
         this.expansionRatio = SealStdIdxPirUtils.expansionRatio(this.encryptionParams);
+        // Temp
+        context = new SealContext(encryptionParams);
     }
 
     /**
@@ -68,7 +75,7 @@ public class SealStdIdxPirParams implements StdIdxPirParams {
 
     @Override
     public byte[] getEncryptionParams() {
-        return encryptionParams;
+        return SealStdIdxPirUtils.serializeEncryptionParams(encryptionParams);
     }
 
     /**

@@ -135,7 +135,7 @@ public class SealStdIdxPirClient extends AbstractStdIdxPirClient implements Pbca
 
     @Override
     public Pair<List<byte[]>, List<byte[]>> keyGen() {
-        List<byte[]> keyPair = SealStdIdxPirUtils.keyGen(params.getEncryptionParams());
+        List<byte[]> keyPair = SealStdIdxPirUtils.keyGen(SealStdIdxPirUtils.deserializeEncryptionParams(SealStdIdxPirParams.context, params.getEncryptionParams()));
         assert (keyPair.size() == 3);
         List<byte[]> clientKeys = new ArrayList<>();
         clientKeys.add(keyPair.get(0));
@@ -152,7 +152,7 @@ public class SealStdIdxPirClient extends AbstractStdIdxPirClient implements Pbca
         // compute indices for each dimension
         int[] indices = PirUtils.decomposeIndex(indexOfPlaintext, dimensionSize);
         List<byte[]> queryPayload = SealStdIdxPirUtils.generateQuery(
-            params.getEncryptionParams(), publicKey, secretKey, indices, dimensionSize
+            SealStdIdxPirUtils.deserializeEncryptionParams(SealStdIdxPirParams.context, params.getEncryptionParams()), publicKey, secretKey, indices, dimensionSize
         );
         sendOtherPartyPayload(PtoStep.CLIENT_SEND_QUERY.ordinal(), queryPayload);
     }
@@ -168,7 +168,7 @@ public class SealStdIdxPirClient extends AbstractStdIdxPirClient implements Pbca
         IntStream intStream = parallel ? IntStream.range(0, partitionSize).parallel() : IntStream.range(0, partitionSize);
         intStream.forEach(partitionIndex -> {
             long[] coeffs = SealStdIdxPirUtils.decryptReply(
-                params.getEncryptionParams(),
+                SealStdIdxPirUtils.deserializeEncryptionParams(SealStdIdxPirParams.context, params.getEncryptionParams()),
                 secretKey,
                 responsePayload.subList(partitionIndex * partitionResponseSize, (partitionIndex + 1) * partitionResponseSize),
                 params.getDimension()

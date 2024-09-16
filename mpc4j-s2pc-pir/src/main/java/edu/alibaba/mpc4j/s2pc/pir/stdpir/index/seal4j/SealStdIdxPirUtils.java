@@ -196,7 +196,7 @@ public class SealStdIdxPirUtils {
         return new ArrayList<>(newtemp.subList(0, m));
     }
 
-    private static byte[] serializeEncryptionParams(EncryptionParameters params) {
+    static byte[] serializeEncryptionParams(EncryptionParameters params) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         try {
             params.save(outputStream, Serialization.COMPR_MODE_DEFAULT);
@@ -207,10 +207,10 @@ public class SealStdIdxPirUtils {
         return outputStream.toByteArray();
     }
 
-    private static EncryptionParameters deserializeEncryptionParams(byte[] paramsBytes) {
+    static EncryptionParameters deserializeEncryptionParams(SealContext context, byte[] paramsBytes) {
         EncryptionParameters params = new EncryptionParameters();
         try {
-            params.load(null, paramsBytes);
+            params.load(context, paramsBytes);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -405,13 +405,13 @@ public class SealStdIdxPirUtils {
      * @param plainModulus      plain modulus.
      * @return encryption params.
      */
-    static byte[] generateEncryptionParams(int polyModulusDegree, long plainModulus) {
+    static EncryptionParameters generateEncryptionParams(int polyModulusDegree, long plainModulus) {
         EncryptionParameters params = new EncryptionParameters(SchemeType.BFV);
         params.setPolyModulusDegree(polyModulusDegree);
         params.setPlainModulus(plainModulus);
         params.setCoeffModulus(CoeffModulus.bfvDefault(polyModulusDegree, CoeffModulus.SecLevelType.TC128));
 
-        return serializeEncryptionParams(params);
+        return params;
     }
 
     /**
@@ -420,16 +420,15 @@ public class SealStdIdxPirUtils {
      * @param encryptionParams encryption params.
      * @return key pair.
      */
-    static List<byte[]> keyGen(byte[] encryptionParams) {
-        EncryptionParameters params = deserializeEncryptionParams(encryptionParams);
-        SealContext context = new SealContext(params);
+    static List<byte[]> keyGen(EncryptionParameters encryptionParams) {
+        SealContext context = new SealContext(encryptionParams);
 
         KeyGenerator keygen = new KeyGenerator(context);
         SecretKey sk = keygen.secretKey();
         PublicKey pk = new PublicKey();
         keygen.createPublicKey(pk); // [Question: Should this be `SealSerializable`?]
 
-        int n = params.polyModulusDegree();
+        int n = encryptionParams.polyModulusDegree();
         int logn = (int) Math.ceil(Math.log(n) / Math.log(2));
         int[] galoisElts = new int[logn];
         for (int j = 0; j < logn; j++) {
@@ -456,9 +455,8 @@ public class SealStdIdxPirUtils {
      * @param plaintextList    plaintext list.
      * @return BFV plaintexts in NTT form.
      */
-    static List<byte[]> nttTransform(byte[] encryptionParams, List<long[]> plaintextList) {
-        EncryptionParameters params = deserializeEncryptionParams(encryptionParams);
-        SealContext context = new SealContext(params);
+    static List<byte[]> nttTransform(EncryptionParameters encryptionParams, List<long[]> plaintextList) {
+        SealContext context = new SealContext(encryptionParams);
         Evaluator evaluator = new Evaluator(context);
         List<Plaintext> plaintexts = deserializePlaintextsFromCoeffWithoutBatchEncode(plaintextList, context);
         for (Plaintext plaintext : plaintexts) {
@@ -477,10 +475,9 @@ public class SealStdIdxPirUtils {
      * @param nvec             dimension size.
      * @return query ciphertexts.
      */
-    static List<byte[]> generateQuery(byte[] encryptionParams, byte[] publicKey, byte[] secretKey, int[] indices,
+    static List<byte[]> generateQuery(EncryptionParameters encryptionParams, byte[] publicKey, byte[] secretKey, int[] indices,
                                       int[] nvec) {
-        EncryptionParameters params = deserializeEncryptionParams(encryptionParams);
-        SealContext context = new SealContext(params);
+        SealContext context = new SealContext(encryptionParams);
 
         PublicKey pk = deserializePublicKey(publicKey, context);
         SecretKey sk = deserializeSecretKey(secretKey, context);
@@ -491,7 +488,7 @@ public class SealStdIdxPirUtils {
 
         List<SealSerializable<Ciphertext>> result = new ArrayList<>();
 
-        int coeffCount = params.polyModulusDegree();
+        int coeffCount = encryptionParams.polyModulusDegree();
         Plaintext pt = new Plaintext(coeffCount);
 
         for (int i = 0; i < dim; i++) {
@@ -509,7 +506,7 @@ public class SealStdIdxPirUtils {
                         }
                     }
                     int logTotal = (int) Math.ceil(Math.log(total) / Math.log(2));
-                    pt.set(realIndex, invertMod((int) Math.pow(2, logTotal), params.plainModulus()));
+                    pt.set(realIndex, invertMod((int) Math.pow(2, logTotal), encryptionParams.plainModulus()));
                 }
                 result.add(encryptor.encryptSymmetric(pt));
             }
@@ -527,16 +524,15 @@ public class SealStdIdxPirUtils {
      * @param nvec             dimension size.
      * @return response ciphertexts。
      */
-    static List<byte[]> generateReply(byte[] encryptionParams, byte[] galoisKey, List<byte[]> queryList,
+    static List<byte[]> generateReply(EncryptionParameters encryptionParams, byte[] galoisKey, List<byte[]> queryList,
                                       byte[][] database, int[] nvec) {
-        EncryptionParameters params = deserializeEncryptionParams(encryptionParams);
-        SealContext context = new SealContext(params);
+        SealContext context = new SealContext(encryptionParams);
         Evaluator evaluator = new Evaluator(context);
         GaloisKeys galoisKeys = deserializeGaloisKeys(galoisKey, context);
         List<Plaintext> db = deserializePlaintextsArray(database, context);
         List<Ciphertext> queries = deserializeCiphertexts(queryList, context);
         List<List<Ciphertext>> query = new ArrayList<>();
-        int coeffCount = params.polyModulusDegree();
+        int coeffCount = encryptionParams.polyModulusDegree();
 
         int index = 0;
         int product = 1; // [Question: What is the `product` for?]
@@ -552,7 +548,7 @@ public class SealStdIdxPirUtils {
 
         List<Plaintext> cur = db;
         List<Plaintext> intermediatePTs = new ArrayList<>();
-        int expansionRatio = computeExpansionRatio(params);
+        int expansionRatio = computeExpansionRatio(encryptionParams);
         for (int i = 0; i < nvec.length; i++) {
             List<Ciphertext> expandedQuery = new ArrayList<>();
             for (int j = 0; j < query.get(i).size(); j++) {
@@ -563,7 +559,7 @@ public class SealStdIdxPirUtils {
                         total = coeffCount;
                     }
                 }
-                List<Ciphertext> expandedQuery_j = expandQuery(params, query.get(i).get(j), galoisKeys, total);
+                List<Ciphertext> expandedQuery_j = expandQuery(encryptionParams, query.get(i).get(j), galoisKeys, total);
                 expandedQuery.addAll(expandedQuery_j);
                 expandedQuery_j.clear();
             }
@@ -622,14 +618,13 @@ public class SealStdIdxPirUtils {
      * @param dimension        dimension.
      * @return BFV plaintext.
      */
-    static long[] decryptReply(byte[] encryptionParams, byte[] secretKey, List<byte[]> response, int dimension) {
-        EncryptionParameters params = deserializeEncryptionParams(encryptionParams);
-        SealContext context = new SealContext(params);
+    static long[] decryptReply(EncryptionParameters encryptionParams, byte[] secretKey, List<byte[]> response, int dimension) {
+        SealContext context = new SealContext(encryptionParams);
         SecretKey sk = deserializeSecretKey(secretKey, context);
         Decryptor decryptor = new Decryptor(context, sk);
-        params = context.lastContextData().parms();
+        encryptionParams = context.lastContextData().parms();
         ParmsId parmsId = context.lastParmsId();
-        int expRatio = computeExpansionRatio(params);
+        int expRatio = computeExpansionRatio(encryptionParams);
         List<Ciphertext> temp = deserializeCiphertexts(response, context);
         int ciphertextSize = temp.getFirst().size();
         for (int i = 0; i < dimension; i++) {
@@ -641,7 +636,7 @@ public class SealStdIdxPirUtils {
                 tempplain.add(ptxt);
                 if ((j + 1) % (expRatio * ciphertextSize) == 0 && j > 0) {
                     Ciphertext combined = new Ciphertext(context, parmsId);
-                    composeToCiphertext(params, tempplain, combined);
+                    composeToCiphertext(encryptionParams, tempplain, combined);
                     System.out.println(combined.size());
                     newtemp.add(combined);
                     tempplain.clear();
@@ -674,9 +669,8 @@ public class SealStdIdxPirUtils {
      * @param encryptionParams encryption params.
      * @return expansion ratio.
      */
-    static int expansionRatio(byte[] encryptionParams) {
-        EncryptionParameters params = deserializeEncryptionParams(encryptionParams);
-        SealContext context = new SealContext(params);
+    static int expansionRatio(EncryptionParameters encryptionParams) {
+        SealContext context = new SealContext(encryptionParams);
 
         return computeExpansionRatio(context.lastContextData().parms()) << 1;
     }

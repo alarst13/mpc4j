@@ -5,6 +5,7 @@ import edu.alibaba.mpc4j.common.structure.database.NaiveDatabase;
 import edu.alibaba.mpc4j.common.structure.database.ZlDatabase;
 import edu.alibaba.mpc4j.common.tool.CommonConstants;
 import edu.alibaba.mpc4j.common.tool.utils.CommonUtils;
+import edu.alibaba.mpc4j.crypto.fhe.context.SealContext;
 import edu.alibaba.mpc4j.s2pc.pir.PirUtils;
 import edu.alibaba.mpc4j.s2pc.pir.stdpir.index.AbstractStdIdxPirServer;
 import edu.alibaba.mpc4j.s2pc.pir.stdpir.index.PbcableStdIdxPirServer;
@@ -188,7 +189,7 @@ public class SealStdIdxPirServer extends AbstractStdIdxPirServer implements Pbca
         IntStream.range(0, (prod - currentPlaintextSize))
             .mapToObj(i -> IntStream.range(0, params.getPolyModulusDegree()).mapToLong(i1 -> 1L).toArray())
             .forEach(coeffsList::add);
-        return SealStdIdxPirUtils.nttTransform(params.getEncryptionParams(), coeffsList)
+        return SealStdIdxPirUtils.nttTransform(SealStdIdxPirUtils.deserializeEncryptionParams(SealStdIdxPirParams.context, params.getEncryptionParams()), coeffsList)
             .toArray(new byte[0][]);
     }
 
@@ -199,7 +200,7 @@ public class SealStdIdxPirServer extends AbstractStdIdxPirServer implements Pbca
         IntStream intStream = parallel ? IntStream.range(0, partitionSize).parallel() : IntStream.range(0, partitionSize);
         List<byte[]> serverResponsePayload = intStream
             .mapToObj(i -> SealStdIdxPirUtils.generateReply(
-                params.getEncryptionParams(), galoisKeys, queryPayload, encodedDatabase.get(i), dimensionSize)
+                SealStdIdxPirUtils.deserializeEncryptionParams(SealStdIdxPirParams.context, params.getEncryptionParams()), galoisKeys, queryPayload, encodedDatabase.get(i), dimensionSize)
             )
             .flatMap(Collection::stream)
             .collect(Collectors.toCollection(ArrayList::new));
