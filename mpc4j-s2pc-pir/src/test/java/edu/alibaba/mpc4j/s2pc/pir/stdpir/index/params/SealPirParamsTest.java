@@ -1,8 +1,12 @@
 package edu.alibaba.mpc4j.s2pc.pir.stdpir.index.params;
 
+import com.google.common.base.Preconditions;
 import edu.alibaba.mpc4j.common.rpc.pto.AbstractTwoPartyMemoryRpcPto;
 import edu.alibaba.mpc4j.common.structure.database.NaiveDatabase;
 import edu.alibaba.mpc4j.common.tool.CommonConstants;
+import edu.alibaba.mpc4j.common.tool.bitvector.BitVector;
+import edu.alibaba.mpc4j.common.tool.bitvector.BitVectorFactory;
+import edu.alibaba.mpc4j.common.tool.utils.BytesUtils;
 import edu.alibaba.mpc4j.s2pc.pir.stdpir.index.StdIdxPirClientThread;
 import edu.alibaba.mpc4j.s2pc.pir.stdpir.index.StdIdxPirFactory;
 import edu.alibaba.mpc4j.s2pc.pir.stdpir.index.StdIdxPirServerThread;
@@ -17,7 +21,9 @@ import org.junit.runners.Parameterized;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.stream.IntStream;
 
 /**
  * SEAL PIR params test.
@@ -46,21 +52,21 @@ public class SealPirParamsTest extends AbstractTwoPartyMemoryRpcPto {
 
         // SEAL PIR (1-dimension)
         configurations.add(new Object[]{
-            StdIdxPirFactory.StdIdxPirType.SEAL.name() + " (1-dimension)",
-            new SealStdIdxPirConfig.Builder().setParams(new SealStdIdxPirParams(4096, 20, 1)).build()
+                StdIdxPirFactory.StdIdxPirType.SEAL.name() + " (1-dimension)",
+                new SealStdIdxPirConfig.Builder().setParams(new SealStdIdxPirParams(4096, 20, 1)).build()
         });
         configurations.add(new Object[]{
-            StdIdxPirFactory.StdIdxPirType.SEAL.name() + " (1-dimension)",
-            new SealStdIdxPirConfig.Builder().setParams(new SealStdIdxPirParams(8192, 20, 1)).build()
+                StdIdxPirFactory.StdIdxPirType.SEAL.name() + " (1-dimension)",
+                new SealStdIdxPirConfig.Builder().setParams(new SealStdIdxPirParams(8192, 20, 1)).build()
         });
         // SEAL PIR (2-dimension)
         configurations.add(new Object[]{
-            StdIdxPirFactory.StdIdxPirType.SEAL.name() + " (2-dimension)",
-            new SealStdIdxPirConfig.Builder().setParams(new SealStdIdxPirParams(4096, 20, 2)).build()
+                StdIdxPirFactory.StdIdxPirType.SEAL.name() + " (2-dimension)",
+                new SealStdIdxPirConfig.Builder().setParams(new SealStdIdxPirParams(4096, 20, 2)).build()
         });
         configurations.add(new Object[]{
-            StdIdxPirFactory.StdIdxPirType.SEAL.name() + " (2-dimension)",
-            new SealStdIdxPirConfig.Builder().setParams(new SealStdIdxPirParams(8192, 20, 2)).build()
+                StdIdxPirFactory.StdIdxPirType.SEAL.name() + " (2-dimension)",
+                new SealStdIdxPirConfig.Builder().setParams(new SealStdIdxPirParams(8192, 20, 2)).build()
         });
 
         return configurations;
@@ -96,6 +102,7 @@ public class SealPirParamsTest extends AbstractTwoPartyMemoryRpcPto {
         testPto(DEFAULT_ELEMENT_BIT_LENGTH, true);
     }
 
+    // Failed
     @Test
     public void testLargeElementSealPir() {
         testPto(LARGE_ELEMENT_BIT_LENGTH, true);
