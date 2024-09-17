@@ -131,10 +131,8 @@ public class SealStdIdxPirUtils {
         SealContext context = new SealContext(params);
         Evaluator evaluator = new Evaluator(context);
 
-        System.out.println(m);
-
         // If `m` is not a power of 2, round it up to the nearest power of 2.
-        int logm = (int) Math.ceil(Math.log(m) / Math.ceil(Math.log(2)));
+        int logm = (int) Math.ceil(Math.log(m) / Math.log(2));
 
         Plaintext two = new Plaintext("2");
         List<Integer> galoisElts = new ArrayList<>();

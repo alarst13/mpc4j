@@ -126,11 +126,13 @@ public class StdIdxPirTest extends AbstractTwoPartyMemoryRpcPto {
         secureRandom = new SecureRandom();
     }
 
+    // Failed
     @Test
     public void testDefault() {
         testPto(DEFAULT_N, DEFAULT_L, DEFAULT_QUERY_NUM, false);
     }
 
+    // Failed
     @Test
     public void testParallelDefault() {
         testPto(DEFAULT_N, DEFAULT_L, DEFAULT_QUERY_NUM, true);
@@ -156,6 +158,7 @@ public class StdIdxPirTest extends AbstractTwoPartyMemoryRpcPto {
         testPto(DEFAULT_N, DEFAULT_L, 1, false);
     }
 
+    // Failed
     @Test
     public void testLargeQueryNum() {
         testPto(DEFAULT_N, DEFAULT_L, LARGE_QUERY_NUM, false);
