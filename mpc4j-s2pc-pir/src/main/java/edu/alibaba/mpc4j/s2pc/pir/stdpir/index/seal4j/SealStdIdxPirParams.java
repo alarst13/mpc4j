@@ -79,6 +79,15 @@ public class SealStdIdxPirParams implements StdIdxPirParams {
     }
 
     /**
+     * returns deserialized encryption parameters
+     *
+     * @return encryption parameters.
+     */
+    public EncryptionParameters getEncryptionParameters() {
+        return encryptionParams;
+    }
+
+    /**
      * return expansion ratio.
      *
      * @return expansion ratio.

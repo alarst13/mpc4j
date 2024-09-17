@@ -131,6 +131,8 @@ public class SealStdIdxPirUtils {
         SealContext context = new SealContext(params);
         Evaluator evaluator = new Evaluator(context);
 
+        System.out.println(m);
+
         // If `m` is not a power of 2, round it up to the nearest power of 2.
         int logm = (int) Math.ceil(Math.log(m) / Math.ceil(Math.log(2)));
 
@@ -205,17 +207,6 @@ public class SealStdIdxPirUtils {
         }
 
         return outputStream.toByteArray();
-    }
-
-    static EncryptionParameters deserializeEncryptionParams(SealContext context, byte[] paramsBytes) {
-        EncryptionParameters params = new EncryptionParameters();
-        try {
-            params.load(context, paramsBytes);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        return params;
     }
 
     private static byte[] serializePublicKey(PublicKey pk) {
@@ -637,7 +628,6 @@ public class SealStdIdxPirUtils {
                 if ((j + 1) % (expRatio * ciphertextSize) == 0 && j > 0) {
                     Ciphertext combined = new Ciphertext(context, parmsId);
                     composeToCiphertext(encryptionParams, tempplain, combined);
-                    System.out.println(combined.size());
                     newtemp.add(combined);
                     tempplain.clear();
                 }

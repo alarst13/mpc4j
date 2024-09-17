@@ -189,7 +189,7 @@ public class SealStdIdxPirServer extends AbstractStdIdxPirServer implements Pbca
         IntStream.range(0, (prod - currentPlaintextSize))
             .mapToObj(i -> IntStream.range(0, params.getPolyModulusDegree()).mapToLong(i1 -> 1L).toArray())
             .forEach(coeffsList::add);
-        return SealStdIdxPirUtils.nttTransform(SealStdIdxPirUtils.deserializeEncryptionParams(SealStdIdxPirParams.context, params.getEncryptionParams()), coeffsList)
+        return SealStdIdxPirUtils.nttTransform(params.getEncryptionParameters(), coeffsList)
             .toArray(new byte[0][]);
     }
 
@@ -200,7 +200,7 @@ public class SealStdIdxPirServer extends AbstractStdIdxPirServer implements Pbca
         IntStream intStream = parallel ? IntStream.range(0, partitionSize).parallel() : IntStream.range(0, partitionSize);
         List<byte[]> serverResponsePayload = intStream
             .mapToObj(i -> SealStdIdxPirUtils.generateReply(
-                SealStdIdxPirUtils.deserializeEncryptionParams(SealStdIdxPirParams.context, params.getEncryptionParams()), galoisKeys, queryPayload, encodedDatabase.get(i), dimensionSize)
+                params.getEncryptionParameters(), galoisKeys, queryPayload, encodedDatabase.get(i), dimensionSize)
             )
             .flatMap(Collection::stream)
             .collect(Collectors.toCollection(ArrayList::new));
