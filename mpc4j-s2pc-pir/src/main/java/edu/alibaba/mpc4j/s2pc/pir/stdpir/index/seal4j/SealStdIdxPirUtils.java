@@ -415,7 +415,7 @@ public class SealStdIdxPirUtils {
         KeyGenerator keygen = new KeyGenerator(context);
         SecretKey sk = keygen.secretKey();
         PublicKey pk = new PublicKey();
-        keygen.createPublicKey(pk); // [Question: Should this be `SealSerializable`?]
+        keygen.createPublicKey(pk);
 
         int n = encryptionParams.polyModulusDegree();
         int logn = (int) Math.ceil(Math.log(n) / Math.log(2));
@@ -495,7 +495,7 @@ public class SealStdIdxPirUtils {
                         }
                     }
                     int logTotal = (int) Math.ceil(Math.log(total) / Math.log(2));
-                    pt.set(realIndex, invertMod((int) Math.pow(2, logTotal), encryptionParams.plainModulus()));
+                    pt.set(realIndex, invertMod((int) Math.pow(2, logTotal), encryptionParams.plainModulus())); // [Question: What does `invertMod` do?]
                 }
                 result.add(encryptor.encryptSymmetric(pt));
             }
@@ -524,7 +524,9 @@ public class SealStdIdxPirUtils {
         int coeffCount = encryptionParams.polyModulusDegree();
 
         int index = 0;
-        int product = 1; // [Question: What is the `product` for?]
+        int product = 1; // [Question: What is the `product` for? (1)]
+        // [(1) I think it's because for example for `nvec.size() = 2` we have a `nvec[0]` * `nvec[1]` matrix.]
+        // [    And `product` is helping with the indexing.]
         for (int n : nvec) {
             int numPtxts = (int) Math.ceil((n + 0.0) / coeffCount);
             List<Ciphertext> queryi = new ArrayList<>();
@@ -536,7 +538,6 @@ public class SealStdIdxPirUtils {
         }
 
         List<Plaintext> cur = db;
-        List<Plaintext> intermediatePTs = new ArrayList<>();
         int expansionRatio = computeExpansionRatio(encryptionParams);
         for (int i = 0; i < nvec.length; i++) {
             List<Ciphertext> expandedQuery = new ArrayList<>();
@@ -552,14 +553,14 @@ public class SealStdIdxPirUtils {
                 expandedQuery.addAll(expandedQuery_j);
                 expandedQuery_j.clear();
             }
-            // [Start from here...]
+
             if (expandedQuery.size() != nvec[i]) {
                 throw new IllegalArgumentException("Size mismatch! Expected size: " + nvec[i] + ", but got: " + expandedQuery.size());
             }
-            for (Ciphertext c : expandedQuery) {
+            for (Ciphertext c : expandedQuery) { // [Question: Why?]
                 evaluator.transformToNttInplace(c);
             }
-            if (i > 0) {
+            if (i > 0) { // [Question: Why?]
                 for (Plaintext p : cur) {
                     evaluator.transformToNttInplace(p, context.firstParmsId());
                 }
@@ -573,7 +574,7 @@ public class SealStdIdxPirUtils {
             for (int j = 0; j < product; j++) {
                 evaluator.multiplyPlain(expandedQuery.getFirst(), cur.get(j), intermediateCiphertexts.get(j));
                 for (int k = 1; k < nvec[i]; k++) {
-                    evaluator.multiplyPlain(expandedQuery.get(k), cur.get(j + k * product), temp);
+                    evaluator.multiplyPlain(expandedQuery.get(k), cur.get(j + k * product), temp); // [Question: I don't understand the indexing.]
                     evaluator.addInplace(intermediateCiphertexts.get(j), temp);
                 }
             }
@@ -583,8 +584,7 @@ public class SealStdIdxPirUtils {
             if (i == nvec.length - 1) {
                 return  serializeCiphertexts(intermediateCiphertexts);
             } else {
-                intermediatePTs.clear();
-                intermediatePTs = new ArrayList<>(expansionRatio * product);
+                List<Plaintext> intermediatePTs = new ArrayList<>(expansionRatio * product);
                 cur = intermediatePTs;
                 for (int rr = 0; rr < product; rr++) {
                     evaluator.modSwitchToInplace(intermediateCiphertexts.get(rr), context.lastParmsId());
@@ -611,9 +611,9 @@ public class SealStdIdxPirUtils {
         SealContext context = new SealContext(encryptionParams);
         SecretKey sk = deserializeSecretKey(secretKey, context);
         Decryptor decryptor = new Decryptor(context, sk);
-        encryptionParams = context.lastContextData().parms();
+        EncryptionParameters params = context.lastContextData().parms();
         ParmsId parmsId = context.lastParmsId();
-        int expRatio = computeExpansionRatio(encryptionParams);
+        int expRatio = computeExpansionRatio(params);
         List<Ciphertext> temp = deserializeCiphertexts(response, context);
         int ciphertextSize = temp.getFirst().size();
         for (int i = 0; i < dimension; i++) {
@@ -625,7 +625,7 @@ public class SealStdIdxPirUtils {
                 tempplain.add(ptxt);
                 if ((j + 1) % (expRatio * ciphertextSize) == 0 && j > 0) {
                     Ciphertext combined = new Ciphertext(context, parmsId);
-                    composeToCiphertext(encryptionParams, tempplain, combined);
+                    composeToCiphertext(params, tempplain, combined);
                     newtemp.add(combined);
                     tempplain.clear();
                 }
