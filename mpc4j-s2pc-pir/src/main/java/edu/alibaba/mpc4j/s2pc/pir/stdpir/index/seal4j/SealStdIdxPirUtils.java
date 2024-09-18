@@ -495,7 +495,9 @@ public class SealStdIdxPirUtils {
                         }
                     }
                     int logTotal = (int) Math.ceil(Math.log(total) / Math.log(2));
-                    pt.set(realIndex, invertMod((int) Math.pow(2, logTotal), encryptionParams.plainModulus())); // [Question: What does `invertMod` do?]
+
+                    // Set 'realIndex' in 'pt' to the modular inverse of 2^logTotal mod plainModulus.
+                    pt.set(realIndex, invertMod((int) Math.pow(2, logTotal), encryptionParams.plainModulus()));
                 }
                 result.add(encryptor.encryptSymmetric(pt));
             }
